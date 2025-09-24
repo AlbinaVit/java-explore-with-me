@@ -6,10 +6,16 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.http.HttpStatus;
-import org.springframework.web.bind.annotation.*;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.ResponseStatus;
+import org.springframework.web.bind.annotation.RestController;
+import ru.practicum.server.service.HitService;
 import ru.practicum.statsdto.dto.EndpointHitDTO;
 import ru.practicum.statsdto.dto.ViewStatsDTO;
-import ru.practicum.server.service.HitService;
+
 import java.time.LocalDateTime;
 import java.util.List;
 
@@ -34,7 +40,7 @@ public class HitController {
             @RequestParam(required = false) List<String> uris,
             @RequestParam(defaultValue = "false") Boolean unique) {
 
-        log.info("Received stats request: start={}, end={}, uris={}, unique={}", start, end, uris, unique);
+        log.info("Получен запрос статистики: start={}, end={}, uris={}, unique={}", start, end, uris, unique);
         return hitService.getStats(start, end, uris, unique);
     }
 }

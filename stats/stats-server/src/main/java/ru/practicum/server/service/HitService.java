@@ -4,10 +4,11 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-import ru.practicum.statsdto.dto.EndpointHitDTO;
-import ru.practicum.statsdto.dto.ViewStatsDTO;
+import ru.practicum.server.exception.ValidationException;
 import ru.practicum.server.model.Hit;
 import ru.practicum.server.repository.HitRepository;
+import ru.practicum.statsdto.dto.EndpointHitDTO;
+import ru.practicum.statsdto.dto.ViewStatsDTO;
 
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
@@ -37,17 +38,20 @@ public class HitService {
     @Transactional(readOnly = true)
     public List<ViewStatsDTO> getStats(LocalDateTime start, LocalDateTime end, List<String> uris, Boolean unique) {
         validateDateRange(start, end);
-
+        List<ViewStatsDTO> result;
         if (Boolean.TRUE.equals(unique)) {
-            return hitRepository.getUniqueStats(start, end, uris);
+             result =  hitRepository.getUniqueStats(start, end, uris);
+        //    return result
         } else {
-            return hitRepository.getStats(start, end, uris);
+           result = hitRepository.getStats(start, end, uris);
         }
+        log.info("getStats result: {}", result);
+        return result;
     }
 
     private void validateDateRange(LocalDateTime start, LocalDateTime end) {
         if (start.isAfter(end)) {
-            throw new IllegalArgumentException("Start date cannot be after end date");
+            throw new ValidationException("Дата начала не может быть позже даты окончания");
         }
     }
 }

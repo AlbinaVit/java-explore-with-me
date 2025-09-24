@@ -1,9 +1,8 @@
 package ru.practicum.statsclient.client;
 
 import lombok.RequiredArgsConstructor;
-import org.springframework.beans.factory.annotation.Value;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.MediaType;
-import org.springframework.stereotype.Component;
 import org.springframework.web.client.RestClient;
 import org.springframework.web.util.UriComponentsBuilder;
 import ru.practicum.statsdto.dto.EndpointHitDTO;
@@ -16,19 +15,22 @@ import java.time.format.DateTimeFormatter;
 import java.util.Arrays;
 import java.util.List;
 
-@Component
+@Slf4j
 @RequiredArgsConstructor
-public class StatsClient {
+public abstract class StatsClient {
     private final RestClient restClient;
 
-    @Value("${stats.server.url}")
-    private String baseUrl;
+    public StatsClient(String serverUrl) {
+        restClient = RestClient.builder()
+                .baseUrl(serverUrl)
+                .build();
+    }
 
     private static final DateTimeFormatter FORMATTER = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss");
 
     public void saveHit(EndpointHitDTO endpointHitDto) {
         restClient.post()
-                .uri(baseUrl + "/hit")
+                .uri("/hit")
                 .contentType(MediaType.APPLICATION_JSON)
                 .body(endpointHitDto)
                 .retrieve()
@@ -36,9 +38,10 @@ public class StatsClient {
     }
 
     public List<ViewStatsDTO> getStats(LocalDateTime start, LocalDateTime end, List<String> uris, Boolean unique) {
-        UriComponentsBuilder uriBuilder = UriComponentsBuilder.fromHttpUrl(baseUrl + "/stats")
-                .queryParam("start", encodeDateTime(start))
-                .queryParam("end", encodeDateTime(end))
+        log.info("List<ViewStatsDTO> getStats start: {}, end: {}", start, end);
+        UriComponentsBuilder uriBuilder = UriComponentsBuilder.fromHttpUrl("/stats")
+                .queryParam("start", start)
+                .queryParam("end", end)
                 .queryParam("unique", unique);
 
         if (uris != null && !uris.isEmpty()) {
@@ -46,16 +49,13 @@ public class StatsClient {
         }
 
         String url = uriBuilder.toUriString();
-
+        log.info("url: {}", url);
         ViewStatsDTO[] response = restClient.get()
                 .uri(url)
                 .retrieve()
                 .body(ViewStatsDTO[].class);
-
+        log.info("iewStatsDTO[] response", Arrays.toString(response));
         return Arrays.asList(response);
     }
 
-    private String encodeDateTime(LocalDateTime dateTime) {
-        return URLEncoder.encode(dateTime.format(FORMATTER), StandardCharsets.UTF_8);
-    }
 }
