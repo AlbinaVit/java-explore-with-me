@@ -24,8 +24,6 @@ public abstract class StatsClient {
                 .build();
     }
 
-    private static final DateTimeFormatter FORMATTER = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss");
-
     public void saveHit(EndpointHitDTO endpointHitDto) {
         restClient.post()
                 .uri("/hit")

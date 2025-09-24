@@ -19,7 +19,7 @@ import java.time.format.DateTimeFormatter;
 @Component
 @RequiredArgsConstructor
 public class EventMapper {
-    private final DateTimeFormatter FORMATTER = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss");
+    private final DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss");
 
     public EventFullDto toFullDto(Event event, CategoryDto categoryDto, UserShortDto userDto, LocationDto locationDto) {
         return EventFullDto.builder()
@@ -27,14 +27,14 @@ public class EventMapper {
                 .annotation(event.getAnnotation())
                 .category(categoryDto)
                 .confirmedRequests(event.getConfirmedRequests())
-                .createdOn(event.getCreatedOn() != null ? event.getCreatedOn().format(FORMATTER) : null)
+                .createdOn(event.getCreatedOn() != null ? event.getCreatedOn().format(formatter) : null)
                 .description(event.getDescription())
-                .eventDate(event.getEventDate() != null ? event.getEventDate().format(FORMATTER) : null)
+                .eventDate(event.getEventDate() != null ? event.getEventDate().format(formatter) : null)
                 .initiator(userDto)
                 .location(locationDto)
                 .paid(event.getPaid())
                 .participantLimit(event.getParticipantLimit())
-                .publishedOn(event.getPublishedOn() != null ? event.getPublishedOn().format(FORMATTER) : null)
+                .publishedOn(event.getPublishedOn() != null ? event.getPublishedOn().format(formatter) : null)
                 .requestModeration(event.getRequestModeration())
                 .state(event.getState().name())
                 .title(event.getTitle())
@@ -48,7 +48,7 @@ public class EventMapper {
                 .annotation(event.getAnnotation())
                 .category(category)
                 .confirmedRequests(event.getConfirmedRequests())
-                .eventDate(event.getEventDate() != null ? event.getEventDate().format(FORMATTER) : null)
+                .eventDate(event.getEventDate() != null ? event.getEventDate().format(formatter) : null)
                 .initiator(user)
                 .paid(event.getPaid())
                 .title(event.getTitle())
@@ -60,7 +60,7 @@ public class EventMapper {
         return Event.builder()
                 .annotation(newEventDto.getAnnotation())
                 .description(newEventDto.getDescription())
-                .eventDate(LocalDateTime.parse(newEventDto.getEventDate(), FORMATTER))
+                .eventDate(LocalDateTime.parse(newEventDto.getEventDate(), formatter))
                 .paid(newEventDto.getPaid() != null ? newEventDto.getPaid() : false)
                 .participantLimit(newEventDto.getParticipantLimit() != null ? newEventDto.getParticipantLimit() : 0)
                 .requestModeration(newEventDto.getRequestModeration() != null ? newEventDto.getRequestModeration() : true)
@@ -75,7 +75,7 @@ public class EventMapper {
     public void updateFromAdminRequest(UpdateEventAdminRequest dto, Event event) {
         if (dto.getAnnotation() != null) event.setAnnotation(dto.getAnnotation());
         if (dto.getDescription() != null) event.setDescription(dto.getDescription());
-        if (dto.getEventDate() != null) event.setEventDate(LocalDateTime.parse(dto.getEventDate(), FORMATTER));
+        if (dto.getEventDate() != null) event.setEventDate(LocalDateTime.parse(dto.getEventDate(), formatter));
         if (dto.getPaid() != null) event.setPaid(dto.getPaid());
         if (dto.getParticipantLimit() != null) event.setParticipantLimit(dto.getParticipantLimit());
         if (dto.getRequestModeration() != null) event.setRequestModeration(dto.getRequestModeration());
@@ -86,7 +86,7 @@ public class EventMapper {
     public void updateFromUserRequest(UpdateEventUserRequest dto, Event event) {
         if (dto.getAnnotation() != null) event.setAnnotation(dto.getAnnotation());
         if (dto.getDescription() != null) event.setDescription(dto.getDescription());
-        if (dto.getEventDate() != null) event.setEventDate(LocalDateTime.parse(dto.getEventDate(), FORMATTER));
+        if (dto.getEventDate() != null) event.setEventDate(LocalDateTime.parse(dto.getEventDate(), formatter));
         if (dto.getPaid() != null) event.setPaid(dto.getPaid());
         if (dto.getParticipantLimit() != null) event.setParticipantLimit(dto.getParticipantLimit());
         if (dto.getRequestModeration() != null) event.setRequestModeration(dto.getRequestModeration());

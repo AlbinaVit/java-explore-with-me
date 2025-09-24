@@ -66,7 +66,7 @@ public class EventServiceImpl implements EventService {
     @PersistenceContext
     private EntityManager em;
 
-    private final DateTimeFormatter FORMATTER = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss");
+    private final DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss");
 
     @Override
     public List<EventShortDto> getEventsByUser(Long userId, Integer from, Integer size) {
@@ -354,7 +354,7 @@ public class EventServiceImpl implements EventService {
 
     // Вспомогательный метод для сохранения статистики
     private void saveHitStatistic(String endpoint, String clientIp) {
-        String timestampString = LocalDateTime.now().format(FORMATTER);
+        String timestampString = LocalDateTime.now().format(formatter);
         log.info("Получаем отформатированную дату: {}", timestampString);
 
         EndpointHitDTO hit = new EndpointHitDTO("ewm-main-service", endpoint, clientIp, timestampString);

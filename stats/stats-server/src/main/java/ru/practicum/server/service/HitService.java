@@ -20,7 +20,7 @@ import java.util.List;
 public class HitService {
 
     private final HitRepository hitRepository;
-    private static final DateTimeFormatter FORMATTER = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss");
+    private static final DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss");
 
     @Transactional
     public void createHit(EndpointHitDTO endpointHitDTO) {
@@ -28,7 +28,7 @@ public class HitService {
                 .app(endpointHitDTO.getApp())
                 .uri(endpointHitDTO.getUri())
                 .ip(endpointHitDTO.getIp())
-                .timestamp(LocalDateTime.parse(endpointHitDTO.getTimestamp(), FORMATTER))
+                .timestamp(LocalDateTime.parse(endpointHitDTO.getTimestamp(), formatter))
                 .build();
 
         hitRepository.save(hit);

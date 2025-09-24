@@ -49,12 +49,14 @@ public class Event {
     private Location location;
 
     @Column(nullable = false)
+    @Builder.Default
     private Boolean paid = false;
 
     @Column(nullable = false)
     private Integer participantLimit = 0;
 
     @Column(nullable = false)
+    @Builder.Default
     private Boolean requestModeration = true;
 
     @Column(nullable = false, length = 120)
@@ -75,8 +77,10 @@ public class Event {
     private LocalDateTime publishedOn;
 
     @Column(nullable = false)
+    @Builder.Default
     private Long confirmedRequests = 0L;
 
     @Column(nullable = false)
+    @Builder.Default
     private Long views = 0L;
 }

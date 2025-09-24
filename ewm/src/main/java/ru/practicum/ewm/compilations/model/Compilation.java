@@ -35,6 +35,7 @@ public class Compilation {
     private String title;
 
     @Column(nullable = false)
+    @Builder.Default
     private Boolean pinned = false;
 
     @ManyToMany
@@ -43,6 +44,7 @@ public class Compilation {
             joinColumns = @JoinColumn(name = "compilation_id"),
             inverseJoinColumns = @JoinColumn(name = "event_id")
     )
+    @Builder.Default
     private Set<Event> events = new HashSet<>();
 
 }
