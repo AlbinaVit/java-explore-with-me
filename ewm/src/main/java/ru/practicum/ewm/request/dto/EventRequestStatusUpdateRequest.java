@@ -5,12 +5,10 @@ import jakarta.validation.constraints.NotNull;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
-import lombok.Value;
 
 import java.util.List;
 
 @Data
-@Value
 @Builder
 @AllArgsConstructor
 public class EventRequestStatusUpdateRequest {

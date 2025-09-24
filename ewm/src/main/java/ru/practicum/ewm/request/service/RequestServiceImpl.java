@@ -5,16 +5,14 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import ru.practicum.ewm.events.model.Event;
-import ru.practicum.ewm.events.model.State;
 import ru.practicum.ewm.events.repository.EventRepository;
 import ru.practicum.ewm.exception.ConflictException;
 import ru.practicum.ewm.exception.NotFoundException;
-import ru.practicum.ewm.exception.ValidationException;
-import ru.practicum.ewm.request.dto.RequestMapper;
-import ru.practicum.ewm.request.repository.RequestRepository;
 import ru.practicum.ewm.request.dto.ParticipationRequestDto;
+import ru.practicum.ewm.request.dto.RequestMapper;
 import ru.practicum.ewm.request.model.ParticipationRequest;
 import ru.practicum.ewm.request.model.RequestStatus;
+import ru.practicum.ewm.request.repository.RequestRepository;
 import ru.practicum.ewm.users.model.User;
 import ru.practicum.ewm.users.repository.UserRepository;
 
@@ -32,12 +30,13 @@ public class RequestServiceImpl implements RequestService {
     private final RequestRepository requestRepository;
     private final UserRepository userRepository;
     private final EventRepository eventRepository;
+    private final RequestMapper requestMapper;
 
     public List<ParticipationRequestDto> getUserRequests(Long userId) {
         getUserById(userId);
         List<ParticipationRequest> requests = requestRepository.findByRequesterId(userId);
         return requests.stream()
-                .map(this::toDto)
+                .map(requestMapper::toDto)
                 .collect(Collectors.toList());
     }
 
@@ -49,7 +48,7 @@ public class RequestServiceImpl implements RequestService {
         Event event = null;
         try {
             event = getPublishEventById(eventId);
-        } catch(NotFoundException e) {
+        } catch (NotFoundException e) {
             throw new ConflictException("Невозможно принять участие в неопубликованном мероприятии.");
         }
 
@@ -65,7 +64,7 @@ public class RequestServiceImpl implements RequestService {
         request.setCreated(LocalDateTime.now().truncatedTo(ChronoUnit.MILLIS));
         request.setStatus(status);
         log.info("Создана заявка от пользователя {} на событие {} со статусом {}", userId, eventId, status);
-        return RequestMapper.toDto(requestRepository.save(request));
+        return requestMapper.toDto(requestRepository.save(request));
     }
 
     @Transactional
@@ -87,17 +86,7 @@ public class RequestServiceImpl implements RequestService {
             eventRepository.save(event);
         }
 
-        return toDto(canceledRequest);
-    }
-
-    private ParticipationRequestDto toDto(ParticipationRequest request) {
-        return ParticipationRequestDto.builder()
-                .id(request.getId())
-                .created(request.getCreated())
-                .event(request.getEvent().getId())
-                .requester(request.getRequester().getId())
-                .status(request.getStatus().name())
-                .build();
+        return requestMapper.toDto(canceledRequest);
     }
 
     private ParticipationRequest getRequestById(Long requestId) {

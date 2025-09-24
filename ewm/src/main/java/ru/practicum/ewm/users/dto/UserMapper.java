@@ -32,23 +32,10 @@ public class UserMapper {
                 .build();
     }
 
-    public User toUser(UserDto userDto) {
-        return User.builder()
-                .id(userDto.getId())
-                .name(userDto.getName())
-                .email(userDto.getEmail())
-                .build();
-    }
 
     public List<UserDto> toUserDtoList(List<User> users) {
         return users.stream()
                 .map(this::toUserDto)
-                .collect(Collectors.toList());
-    }
-
-    public List<UserShortDto> toUserShortDtoList(List<User> users) {
-        return users.stream()
-                .map(this::toUserShortDto)
                 .collect(Collectors.toList());
     }
 
