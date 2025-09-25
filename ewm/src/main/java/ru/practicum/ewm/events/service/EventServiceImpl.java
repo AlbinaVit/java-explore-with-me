@@ -29,6 +29,7 @@ import ru.practicum.ewm.exception.ValidationException;
 import ru.practicum.ewm.request.dto.EventRequestStatusUpdateRequest;
 import ru.practicum.ewm.request.dto.EventRequestStatusUpdateResult;
 import ru.practicum.ewm.request.dto.ParticipationRequestDto;
+import ru.practicum.ewm.request.dto.RequestMapper;
 import ru.practicum.ewm.request.model.ParticipationRequest;
 import ru.practicum.ewm.request.model.RequestStatus;
 import ru.practicum.ewm.request.repository.RequestRepository;
@@ -62,6 +63,7 @@ public class EventServiceImpl implements EventService {
     private final UserMapper userMapper;
     private final LocationMapper locationMapper;
     private final StatsClient statsClient;
+    private final RequestMapper requestMapper;
 
     @PersistenceContext
     private EntityManager em;
@@ -200,7 +202,7 @@ public class EventServiceImpl implements EventService {
 
         List<ParticipationRequest> requests = requestRepository.findByEventId(eventId);
         return requests.stream()
-                .map(this::toParticipationRequestDto)
+                .map(requestMapper::toDto)
                 .collect(Collectors.toList());
     }
 
@@ -238,6 +240,7 @@ public class EventServiceImpl implements EventService {
         }
 
         EventRequestStatusUpdateResult result = new EventRequestStatusUpdateResult(new ArrayList<>(), new ArrayList<>());
+        List<ParticipationRequest> toSave = new ArrayList<>();
 
         if ("CONFIRMED".equals(request.getStatus())) {
             // Подтверждение запросов
@@ -247,17 +250,19 @@ public class EventServiceImpl implements EventService {
             for (int i = 0; i < toConfirm; i++) {
                 ParticipationRequest req = requests.get(i);
                 req.setStatus(RequestStatus.CONFIRMED);
-                requestRepository.save(req);
-                result.getConfirmedRequests().add(toParticipationRequestDto(req));
+                toSave.add(req);
+                result.getConfirmedRequests().add(requestMapper.toDto(req));
             }
 
             // Отклонение оставшихся если лимит исчерпан
             for (int i = toConfirm; i < requests.size(); i++) {
                 ParticipationRequest req = requests.get(i);
                 req.setStatus(RequestStatus.REJECTED);
-                requestRepository.save(req);
-                result.getRejectedRequests().add(toParticipationRequestDto(req));
+                toSave.add(req);
+                result.getRejectedRequests().add(requestMapper.toDto(req));
             }
+
+            requestRepository.saveAll(toSave);
 
             // Обновление счетчика подтвержденных запросов
             event.setConfirmedRequests(event.getConfirmedRequests() + toConfirm);
@@ -267,9 +272,10 @@ public class EventServiceImpl implements EventService {
             // Отклонение запросов
             for (ParticipationRequest req : requests) {
                 req.setStatus(RequestStatus.REJECTED);
-                requestRepository.save(req);
-                result.getRejectedRequests().add(toParticipationRequestDto(req));
+                toSave.add(req);
+                result.getRejectedRequests().add(requestMapper.toDto(req));
             }
+            requestRepository.saveAll(toSave);
         }
 
         return result;
@@ -384,7 +390,7 @@ public class EventServiceImpl implements EventService {
             categories = Collections.emptyList();
         }
 
-        if (rangeStart != null && rangeEnd != null && rangeEnd.isBefore(rangeStart)) {
+        if (rangeEnd.isBefore(rangeStart)) {
             throw new ValidationException("rangeEnd не может быть раньше rangeStart");
         }
 
@@ -486,16 +492,6 @@ public class EventServiceImpl implements EventService {
         } catch (Exception e) {
             log.error("Ошибка при обновлении просмотров для события {}: {}", event.getId(), e.getMessage());
         }
-    }
-
-    private ParticipationRequestDto toParticipationRequestDto(ParticipationRequest request) {
-        return ParticipationRequestDto.builder()
-                .id(request.getId())
-                .created(request.getCreated())
-                .event(request.getEvent().getId())
-                .requester(request.getRequester().getId())
-                .status(request.getStatus().name())
-                .build();
     }
 
     private User getUserById(Long userId) {

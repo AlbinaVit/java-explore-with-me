@@ -16,8 +16,6 @@ import ru.practicum.ewm.request.repository.RequestRepository;
 import ru.practicum.ewm.users.model.User;
 import ru.practicum.ewm.users.repository.UserRepository;
 
-import java.time.LocalDateTime;
-import java.time.temporal.ChronoUnit;
 import java.util.List;
 import java.util.stream.Collectors;
 
@@ -58,11 +56,7 @@ public class RequestServiceImpl implements RequestService {
         checkParticipantLimit(event, eventId);
         RequestStatus status = determineRequestStatus(event);
 
-        ParticipationRequest request = new ParticipationRequest();
-        request.setRequester(user);
-        request.setEvent(event);
-        request.setCreated(LocalDateTime.now().truncatedTo(ChronoUnit.MILLIS));
-        request.setStatus(status);
+        ParticipationRequest request = requestMapper.toRequest(event, user, status);
         log.info("Создана заявка от пользователя {} на событие {} со статусом {}", userId, eventId, status);
         return requestMapper.toDto(requestRepository.save(request));
     }
