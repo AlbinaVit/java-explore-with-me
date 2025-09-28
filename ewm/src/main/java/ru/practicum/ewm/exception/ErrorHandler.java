@@ -35,7 +35,7 @@ public class ErrorHandler {
         );
     }
 
-    @ExceptionHandler({ValidationException.class, IllegalArgumentException.class, NumberFormatException.class})
+    @ExceptionHandler({ValidationException.class, IllegalArgumentException.class/*, NumberFormatException.class*/})
     @ResponseStatus(HttpStatus.BAD_REQUEST)
     public ApiError handleValidationException(Exception e) {
         log.warn("Некорректный запрос: {}", e.getMessage());
@@ -93,11 +93,11 @@ public class ErrorHandler {
 
 
     @ExceptionHandler(HttpMessageNotReadableException.class)
-    @ResponseStatus(HttpStatus.BAD_REQUEST)  // Изменено с CONFLICT на BAD_REQUEST для корректности
+    @ResponseStatus(HttpStatus.CONFLICT)  // Изменено с CONFLICT на BAD_REQUEST для корректности
     public ApiError handleHttpMessageNotReadableException(HttpMessageNotReadableException e) {
         log.warn("Некорректное тело запроса: {}", e.getMessage());
         return new ApiError(
-                "BAD_REQUEST",
+                "CONFLICT",
                 "Incorrectly made request.",
                 "Некорректное тело запроса или отсутствующие данные",
                 LocalDateTime.now().format(TIMESTAMP_FORMATTER),

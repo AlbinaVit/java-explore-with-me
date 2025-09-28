@@ -5,6 +5,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.stereotype.Service;
 import ru.practicum.ewm.categories.dto.CategoriesMapper;
+import ru.practicum.ewm.comments.repository.CommentRepository;
 import ru.practicum.ewm.compilations.dto.CompilationDto;
 import ru.practicum.ewm.compilations.dto.CompilationMapper;
 import ru.practicum.ewm.compilations.dto.NewCompilationDto;
@@ -19,8 +20,10 @@ import ru.practicum.ewm.exception.ConflictException;
 import ru.practicum.ewm.exception.NotFoundException;
 import ru.practicum.ewm.users.dto.UserMapper;
 
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 import java.util.stream.Collectors;
 
@@ -34,6 +37,7 @@ public class CompilationServiceImpl implements CompilationService {
     private final EventMapper eventMapper;
     private final CategoriesMapper categoriesMapper;
     private final UserMapper userMapper;
+    private final CommentRepository commentRepository;
 
     @Override
     public CompilationDto createCompilation(NewCompilationDto newCompilationDto) {
@@ -116,12 +120,22 @@ public class CompilationServiceImpl implements CompilationService {
     }
 
     private CompilationDto convertToDtoWithEvents(Compilation compilation) {
-        Set<EventShortDto> eventDtos = compilation.getEvents().stream()
+        Set<Event> events = compilation.getEvents();
+        Map<Long, Long> commentCounts = new HashMap<>();
+        if (!events.isEmpty()) {
+            List<Long> eventIds = events.stream().map(Event::getId).collect(Collectors.toList());
+            List<Object[]> counts = commentRepository.findCommentCountsByEventIds(eventIds);
+            for (Object[] count : counts) {
+                commentCounts.put((Long) count[0], (Long) count[1]);
+            }
+        }
+
+        Set<EventShortDto> eventDtos = events.stream()
                 .map(event -> eventMapper.toShortDto(
                         event,
                         categoriesMapper.toCategoryDto(event.getCategory()),
-                        userMapper.toUserShortDto(event.getInitiator())
-                ))
+                        userMapper.toUserShortDto(event.getInitiator()),
+                        commentCounts.getOrDefault(event.getId(), 0L)))
                 .collect(Collectors.toSet());
 
         return compilationMapper.toCompilationDto(compilation, eventDtos);

@@ -5,6 +5,7 @@ import ru.practicum.ewm.events.dto.EventShortDto;
 import ru.practicum.ewm.events.dto.NewEventDto;
 import ru.practicum.ewm.events.dto.UpdateEventAdminRequest;
 import ru.practicum.ewm.events.dto.UpdateEventUserRequest;
+import ru.practicum.ewm.events.model.Event;
 import ru.practicum.ewm.events.model.State;
 import ru.practicum.ewm.request.dto.EventRequestStatusUpdateRequest;
 import ru.practicum.ewm.request.dto.EventRequestStatusUpdateResult;
@@ -41,4 +42,6 @@ public interface EventService {
                                         String sort, Integer from, Integer size, String clientIp, String endpoint);
 
     EventFullDto getEventPublic(Long id, String clientIp, String endpoint);
+
+    Event getEventById(Long eventId);
 }

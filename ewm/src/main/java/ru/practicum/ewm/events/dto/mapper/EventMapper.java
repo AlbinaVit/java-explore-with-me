@@ -21,7 +21,11 @@ import java.time.format.DateTimeFormatter;
 public class EventMapper {
     private final DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss");
 
-    public EventFullDto toFullDto(Event event, CategoryDto categoryDto, UserShortDto userDto, LocationDto locationDto) {
+    public EventFullDto toFullDto(Event event,
+                                  CategoryDto categoryDto,
+                                  UserShortDto userDto,
+                                  LocationDto locationDto,
+                                  Long commentCount) {
         return EventFullDto.builder()
                 .id(event.getId())
                 .annotation(event.getAnnotation())
@@ -39,10 +43,11 @@ public class EventMapper {
                 .state(event.getState().name())
                 .title(event.getTitle())
                 .views(event.getViews())
+                .commentCount(commentCount)
                 .build();
     }
 
-    public EventShortDto toShortDto(Event event, CategoryDto category, UserShortDto user) {
+    public EventShortDto toShortDto(Event event, CategoryDto category, UserShortDto user, Long commentCount) {
         return EventShortDto.builder()
                 .id(event.getId())
                 .annotation(event.getAnnotation())
@@ -53,6 +58,7 @@ public class EventMapper {
                 .paid(event.getPaid())
                 .title(event.getTitle())
                 .views(event.getViews())
+                .commentCount(commentCount)
                 .build();
     }
 
