@@ -11,6 +11,7 @@ import org.springframework.stereotype.Service;
 import ru.practicum.ewm.categories.dto.CategoriesMapper;
 import ru.practicum.ewm.categories.model.Category;
 import ru.practicum.ewm.categories.repository.CategoriesRepository;
+import ru.practicum.ewm.comments.repository.CommentRepository;
 import ru.practicum.ewm.events.dto.EventFullDto;
 import ru.practicum.ewm.events.dto.EventShortDto;
 import ru.practicum.ewm.events.dto.NewEventDto;
@@ -36,6 +37,7 @@ import ru.practicum.ewm.request.repository.RequestRepository;
 import ru.practicum.ewm.users.dto.UserMapper;
 import ru.practicum.ewm.users.model.User;
 import ru.practicum.ewm.users.repository.UserRepository;
+import ru.practicum.ewm.users.service.UserService;
 import ru.practicum.statsclient.client.StatsClient;
 import ru.practicum.statsdto.dto.EndpointHitDTO;
 import ru.practicum.statsdto.dto.ViewStatsDTO;
@@ -64,6 +66,8 @@ public class EventServiceImpl implements EventService {
     private final LocationMapper locationMapper;
     private final StatsClient statsClient;
     private final RequestMapper requestMapper;
+    private final UserService userService;
+    private final CommentRepository commentRepository;
 
     @PersistenceContext
     private EntityManager em;
@@ -72,20 +76,25 @@ public class EventServiceImpl implements EventService {
 
     @Override
     public List<EventShortDto> getEventsByUser(Long userId, Integer from, Integer size) {
-        User user = getUserById(userId);
+        User user = userService.getUserById(userId);
 
         Pageable pageable = PageRequest.of(from / size, size, Sort.by("id").ascending());
         List<Event> events = eventRepository.findByInitiatorId(userId, pageable).getContent();
+
+        // подсчёт commentCount
+        Map<Long, Long> commentCounts = batchCommentCounts(events);
+
         return events.stream()
                 .map(event -> eventMapper.toShortDto(event,
                         categoriesMapper.toCategoryDto(event.getCategory()),
-                        userMapper.toUserShortDto(user)))
+                        userMapper.toUserShortDto(user),
+                        commentCounts.getOrDefault(event.getId(), 0L)))
                 .collect(Collectors.toList());
     }
 
     @Override
     public EventFullDto createEvent(Long userId, NewEventDto newEventDto) {
-        User user = getUserById(userId);
+        User user = userService.getUserById(userId);
         Category category = getCategoryById(newEventDto.getCategory());
 
         // Проверка времени события
@@ -113,25 +122,29 @@ public class EventServiceImpl implements EventService {
         return eventMapper.toFullDto(savedEvent,
                 categoriesMapper.toCategoryDto(category),
                 userMapper.toUserShortDto(user),
-                locationMapper.toLocationDto(savedLocation));
+                locationMapper.toLocationDto(savedLocation),
+                0L);
     }
 
     @Override
     public EventFullDto getEventByUser(Long userId, Long eventId) {
-        User user = getUserById(userId);
+        User user = userService.getUserById(userId);
         Event event = getEventById(eventId);
         if (!event.getInitiator().getId().equals(userId)) {
             throw new NotFoundException("Событие не принадлежит пользователю");
         }
+        Long commentCount = commentRepository.countByEventId(eventId);
+
         return eventMapper.toFullDto(event,
                 categoriesMapper.toCategoryDto(event.getCategory()),
                 userMapper.toUserShortDto(user),
-                locationMapper.toLocationDto(event.getLocation()));
+                locationMapper.toLocationDto(event.getLocation()),
+                commentCount);
     }
 
     @Override
     public EventFullDto updateEventByUser(Long userId, Long eventId, UpdateEventUserRequest updateEventUserRequest) {
-        User user = getUserById(userId);
+        User user = userService.getUserById(userId);
         Event event = getEventById(eventId);
 
         if (!event.getInitiator().getId().equals(userId)) {
@@ -185,15 +198,18 @@ public class EventServiceImpl implements EventService {
         }
 
         Event updatedEvent = eventRepository.save(event);
+        Long commentCount = commentRepository.countByEventId(eventId);
+
         return eventMapper.toFullDto(updatedEvent,
                 categoriesMapper.toCategoryDto(updatedEvent.getCategory()),
                 userMapper.toUserShortDto(updatedEvent.getInitiator()),
-                locationMapper.toLocationDto(updatedEvent.getLocation()));
+                locationMapper.toLocationDto(updatedEvent.getLocation()),
+                commentCount);
     }
 
     @Override
     public List<ParticipationRequestDto> getEventRequests(Long userId, Long eventId) {
-        getUserById(userId);
+        userService.getUserById(userId);
         Event event = getEventById(eventId);
 
         if (!event.getInitiator().getId().equals(userId)) {
@@ -214,7 +230,7 @@ public class EventServiceImpl implements EventService {
             throw new ConflictException("Некорректное тело запроса или отсутствующие данные");
         }
 
-        getUserById(userId);
+        userService.getUserById(userId);
         Event event = getEventById(eventId);
 
         if (!event.getInitiator().getId().equals(userId)) {
@@ -294,12 +310,16 @@ public class EventServiceImpl implements EventService {
         categories = categories == null ? Collections.emptyList() : categories;
 
         List<Event> events = eventRepository.findEventsForAdmin(users, strStates, categories, rangeStart, rangeEnd, pageable).getContent();
+        // подсчёт commentCount
+        Map<Long, Long> commentCounts = batchCommentCounts(events);
+
         return events.stream()
                 .map(event -> eventMapper.toFullDto(
                         event,
                         categoriesMapper.toCategoryDto(event.getCategory()),
                         userMapper.toUserShortDto(event.getInitiator()),
-                        locationMapper.toLocationDto(event.getLocation())))
+                        locationMapper.toLocationDto(event.getLocation()),
+                        commentCounts.getOrDefault(event.getId(), 0L)))
                 .collect(Collectors.toList());
     }
 
@@ -352,10 +372,13 @@ public class EventServiceImpl implements EventService {
         }
 
         Event updatedEvent = eventRepository.save(event);
+        Long commentCount = commentRepository.countByEventId(eventId);
+
         return eventMapper.toFullDto(updatedEvent,
                 categoriesMapper.toCategoryDto(updatedEvent.getCategory()),
                 userMapper.toUserShortDto(updatedEvent.getInitiator()),
-                locationMapper.toLocationDto(updatedEvent.getLocation()));
+                locationMapper.toLocationDto(updatedEvent.getLocation()),
+                commentCount);
     }
 
     // Вспомогательный метод для сохранения статистики
@@ -417,11 +440,15 @@ public class EventServiceImpl implements EventService {
             events = sortedEvents;
         }
 
+        // Batch-подсчёт commentCount
+        Map<Long, Long> commentCounts = batchCommentCounts(events);
+
         return events.stream()
                 .map(event -> eventMapper.toShortDto(
                         event,
                         categoriesMapper.toCategoryDto(event.getCategory()),
-                        userMapper.toUserShortDto(event.getInitiator())))
+                        userMapper.toUserShortDto(event.getInitiator()),
+                        commentCounts.getOrDefault(event.getId(), 0L)))
                 .collect(Collectors.toList());
     }
 
@@ -433,10 +460,13 @@ public class EventServiceImpl implements EventService {
         updateViewsForSingleEvent(event);
         saveHitStatistic(endpoint, clientIp);
 
+        Long commentCount = commentRepository.countByEventId(id);
+
         return eventMapper.toFullDto(event,
                 categoriesMapper.toCategoryDto(event.getCategory()),
                 userMapper.toUserShortDto(event.getInitiator()),
-                locationMapper.toLocationDto(event.getLocation()));
+                locationMapper.toLocationDto(event.getLocation()),
+                commentCount);
     }
 
     // Пакетное обновление просмотров для списка событий
@@ -494,9 +524,17 @@ public class EventServiceImpl implements EventService {
         }
     }
 
-    private User getUserById(Long userId) {
-        return userRepository.findById(userId)
-                .orElseThrow(() -> new NotFoundException("Пользователь с ID " + userId + " не найден"));
+    // Вспомогательный метод для подсчёта commentCount
+    private Map<Long, Long> batchCommentCounts(List<Event> events) {
+        Map<Long, Long> commentCounts = new HashMap<>();
+        if (!events.isEmpty()) {
+            List<Long> eventIds = events.stream().map(Event::getId).collect(Collectors.toList());
+            List<Object[]> counts = commentRepository.findCommentCountsByEventIds(eventIds);
+            for (Object[] count : counts) {
+                commentCounts.put((Long) count[0], (Long) count[1]);
+            }
+        }
+        return commentCounts;
     }
 
     private Category getCategoryById(Long categoryId) {
@@ -504,7 +542,7 @@ public class EventServiceImpl implements EventService {
                 .orElseThrow(() -> new NotFoundException("Категория с ID " + categoryId + " не найдена"));
     }
 
-    private Event getEventById(Long eventId) {
+    public Event getEventById(Long eventId) {
         return eventRepository.findById(eventId)
                 .orElseThrow(() -> new NotFoundException("Событие с ID " + eventId + " не найдено"));
     }
